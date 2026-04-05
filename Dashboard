@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruthimex Command Center V10 — KPI Performance Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-side: #0F1A10; 
+            --bg-main: #141E15;
+            --bg-card: #1C2B1E;
+            --ruth-green: #78B32D; 
+            --ruth-yellow: #FFD700; 
+            --ruth-dark: #050505;
+            --amber: #F5A623;
+            --red: #FF4D4D;
+            --blue: #4D96FF;
+            --text-main: #F0F4F0;
+            --text-dim: #A0B0A0;
+            --border: #2D3D2F;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        aside {
+            width: 280px;
+            background: var(--bg-side);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(120, 179, 45, 0.1) 0%, transparent 100%);
+        }
+        .sidebar-header h2 { font-size: 1.1rem; color: var(--ruth-green); letter-spacing: 2px; font-weight: 800; }
+        
+        .nav-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        .nav-item {
+            padding: 12px 24px;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.3s;
+            border-left: 4px solid transparent;
+        }
+        .nav-item:hover { background: rgba(120, 179, 45, 0.05); color: white; }
+        .nav-item.active { 
+            background: rgba(120, 179, 45, 0.15); 
+            color: var(--ruth-green); 
+            border-left-color: var(--ruth-green);
+            font-weight: 700;
+        }
+        .nav-item.special { color: var(--ruth-yellow); border-left-color: var(--ruth-yellow); background: rgba(255, 215, 0, 0.05); }
+
+        /* --- MAIN CONTENT --- */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            overflow-y: auto;
+            background: radial-gradient(circle at top right, rgba(120, 179, 45, 0.05), transparent);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .dept-title { font-size: 1.6rem; font-weight: 800; border-bottom: 3px solid var(--ruth-green); padding-bottom: 5px; }
+        .sync-status { font-size: 0.7rem; color: var(--ruth-green); background: rgba(120, 179, 45, 0.1); padding: 6px 15px; border-radius: 20px; border: 1px solid var(--ruth-green); }
+
+        /* KPI GRID */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .kpi-card:hover { transform: translateY(-3px); border-color: var(--ruth-green); }
+        .kpi-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .kpi-value { font-size: 1.6rem; font-weight: 800; color: var(--ruth-green); }
+        .kpi-sub { font-size: 0.7rem; margin-top: 6px; }
+
+        /* DATA SECTION */
+        .data-section {
+            display: grid;
+            grid-template-columns: 1.4fr 1.2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .panel-h { font-size: 0.95rem; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; color: var(--ruth-yellow); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid var(--border); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); color: #E0E0E0; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+
+        .perf-green { color: var(--ruth-green); font-weight: 700; }
+        .perf-amber { color: var(--amber); font-weight: 700; }
+        .perf-red { color: var(--red); font-weight: 700; }
+
+        /* BASE BOX */
+        .base-box {
+            margin-top: auto;
+            padding: 15px;
+            background: linear-gradient(90deg, rgba(77, 150, 255, 0.1), transparent);
+            border: 1px solid rgba(77, 150, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .base-logo { background: var(--blue); color: white; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; flex-shrink: 0; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="sidebar-header">
+            <div style="background: var(--ruth-green); width: 45px; height: 45px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid var(--ruth-yellow);">
+                <span style="color: var(--bg-side); font-weight: 900; font-size: 1.2rem;">R</span>
+            </div>
+            <h2>RUTHIMEX</h2>
+            <div style="font-size: 0.6rem; color: var(--ruth-yellow); margin-top: 5px; font-weight: 600;">THE KPI PERFORMANCE HUB</div>
+        </div>
+        <div class="nav-list" id="sidebar-nav">
+            <div class="nav-item special active" onclick="showDept('bod')">★ BAN LÃNH ĐẠO</div>
+            <div class="nav-item" onclick="showDept('rd')">01. Trung tâm R&D</div>
+            <div class="nav-item" onclick="showDept('mkt')">02. Phòng Marketing</div>
+            <div class="nav-item" onclick="showDept('xnk')">03. Phòng Xuất Nhập Khẩu</div>
+            <div class="nav-item" onclick="showDept('dd')">04. Phòng Điều Độ Sản Xuất</div>
+            <div class="nav-item" onclick="showDept('kd')">05. Phòng Kinh Doanh</div>
+            <div class="nav-item" onclick="showDept('cd')">06. Phòng Kỹ Thuật Cơ Điện</div>
+            <div class="nav-item" onclick="showDept('km')">07. Phòng Cơ Khí Khuôn Mẫu</div>
+            <div class="nav-item" onclick="showDept('qa')">08. Phòng QA</div>
+            <div class="nav-item" onclick="showDept('ns')">09. Phòng Nhân Sự</div>
+            <div class="nav-item" onclick="showDept('vp')">10. Văn Phòng</div>
+            <div class="nav-item" onclick="showDept('vt')">11. Ban Vật Tư</div>
+            <div class="nav-item" onclick="showDept('tc')">12. Tài Chính - Kế Toán</div>
+        </div>
+    </aside>
+
+    <main id="main-content">
+        <!-- Content dynamic -->
+    </main>
+
+    <script>
+        const departments = {
+            bod: {
+                title: "KPI TỔNG QUAN — TOÀN CÔNG TY",
+                kpis: [
+                    { label: "Doanh thu năm vs KH", val: "242.8B / 300B", sub: "▲ 81% tiến độ năm", color: "green" },
+                    { label: "EBITDA (Lợi nhuận)", val: "44.2B", sub: "▲ 12.4%", color: "yellow" },
+                    { label: "Chỉ số OEE Trung bình", val: "82.5%", sub: "Mục tiêu 85%", color: "amber" },
+                    { label: "Tỷ lệ Đạt KPI Toàn NV", val: "88.2%", sub: "Dữ liệu Base HRM", color: "green" }
+                ],
+                tableH: ["Phòng Ban", "Trưởng Phòng", "KPI Trọng Điểm", "Kết Quả"],
+                tableData: [
+                    ["R&D", "Nguyễn Văn A", "Số sản phẩm mới", "<span class='perf-green'>94%</span>"],
+                    ["Marketing", "Trần Thị B", "Leads MQL", "<span class='perf-amber'>72%</span>"],
+                    ["XNK", "Lê Văn Sơn", "Đúng hạn (OTD)", "<span class='perf-green'>91%</span>"],
+                    ["Điều độ SX", "Phạm Văn D", "Schedule Attainment", "<span class='perf-green'>96%</span>"],
+                    ["Kinh Doanh", "Hoàng Văn E", "Doanh số thực tế", "<span class='perf-amber'>88%</span>"],
+                    ["Kỹ thuật Cơ điện", "Ngô Văn F", "Downtime lò luyện", "<span class='perf-green'>92%</span>"],
+                    ["Cơ khí Khuôn mẫu", "Vũ Văn G", "Độ chính xác CNC", "<span class='perf-green'>91%</span>"],
+                    ["Phòng QA", "Đặng Thị H", "FPY Quality", "<span class='perf-green'>98%</span>"],
+                    ["Phòng Nhân sự", "Nguyễn Văn Sơn", "E-NPS", "<span class='perf-amber'>79%</span>"],
+                    ["Văn Phòng", "Lê Thị J", "Approval Leadtime", "<span class='perf-green'>92%</span>"],
+                    ["Ban Vật Tư", "Bùi Văn K", "Savings Cost", "<span class='perf-amber'>76%</span>"],
+                    ["Tài chính - KT", "Trần Văn L", "Dòng tiền thuần", "<span class='perf-amber'>74%</span>"]
+                ],
+                chartType: "radar",
+                chartLabel: "Cân bằng Chiến lược (BSC)",
+                chartData: {
+                    labels: ['Tài chính', 'Sản xuất', 'Khách hàng', 'Nhân sự', 'ESG', 'R&D'],
+                    datasets: [{ data: [85, 92, 78, 88, 95, 80], borderColor: '#78B32D', backgroundColor: 'rgba(120, 179, 45, 0.3)' }]
+                }
+            },
+            rd: {
+                title: "KPI CHI TIẾT — TRUNG TÂM R&D",
+                kpis: [
+                    { label: "Sản phẩm mới (T4)", val: "05", sub: "Mục tiêu 04", color: "green" },
+                    { label: "Mẫu đạt Lab test", val: "92%", sub: "Chuẩn ISO 9001", color: "green" },
+                    { label: "Tiết kiệm vật liệu", val: "1.4B", sub: "Qua công thức mới", color: "yellow" },
+                    { label: "Sáng kiến xanh", val: "03", sub: "Polymer tái chế", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Nguyễn Văn A (Trưởng)", "Leadtime dự án", "45 ngày", "<span class='perf-green'>42 ngày</span>"],
+                    ["Lê Thị C (Kỹ sư)", "Tỷ lệ mẫu đạt V1", "85%", "<span class='perf-green'>88%</span>"],
+                    ["Trần Văn D (Kỹ sư)", "Hồ sơ kỹ thuật", "12 bộ", "<span class='perf-amber'>10 bộ</span>"]
+                ],
+                chartType: "doughnut",
+                chartLabel: "Trạng thái Dự án R&D",
+                chartData: { labels: ['Ý tưởng', 'Thử nghiệm', 'Kiểm định', 'Bàn giao'], datasets: [{ data: [15, 40, 30, 15], backgroundColor: ['#4D96FF', '#FFD700', '#78B32D', '#A0B0A0'] }] }
+            },
+            mkt: {
+                title: "KPI CHI TIẾT — PHÒNG MARKETING",
+                kpis: [
+                    { label: "Leads MQL", val: "245", sub: "Target 220", color: "green" },
+                    { label: "Brand Awareness", val: "82%", sub: "Tăng 5% YoY", color: "green" },
+                    { label: "CPL (Cost per Lead)", val: "142k", sub: "Mục tiêu < 150k", color: "green" },
+                    { label: "Chiến dịch Xanh", val: "04", sub: "Đang triển khai", color: "yellow" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Trần Thị B (Trưởng)", "Tỷ lệ Lead/Deal", "12%", "<span class='perf-amber'>9.5%</span>"],
+                    ["Phan Văn M (Digital)", "Traffic website", "12k/th", "<span class='perf-green'>14.5k</span>"],
+                    ["Lý Thị K (Content)", "Engagement rate", "4.5%", "<span class='perf-green'>5.1%</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Phễu chuyển đổi (Leads)",
+                chartData: { labels: ['Tiếp cận', 'Quan tâm', 'Lead', 'MQL', 'Deal'], datasets: [{ indexAxis: 'y', data: [1200, 450, 245, 120, 35], backgroundColor: '#78B32D' }] }
+            },
+            xnk: {
+                title: "KPI CHI TIẾT — PHÒNG XNK",
+                kpis: [
+                    { label: "Container xuất khẩu", val: "38", sub: "Xác nhận Anh Sơn", color: "green" },
+                    { label: "Đúng hạn (OTD)", val: "94.2%", sub: "Target 95%", color: "yellow" },
+                    { label: "Logistics/Rev", val: "5.8%", sub: "Biến động cước", color: "red" },
+                    { label: "Lỗi chứng từ", val: "0", sub: "Bằng không", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Lê Văn Sơn (Trưởng)", "Tối ưu cước phí", "5%", "<span class='perf-red'>2.1%</span>"],
+                    ["Ngô Thị N (Docs)", "Thời gian thông quan", "2 ngày", "<span class='perf-green'>1.5 ngày</span>"],
+                    ["Trần Văn P (Ops)", "Tracking chính xác", "100%", "<span class='perf-green'>100%</span>"]
+                ],
+                chartType: "pie",
+                chartLabel: "Cơ cấu Thị trường (Tỷ trọng)",
+                chartData: { labels: ['Nhật', 'EU', 'Hàn', 'Mỹ', 'Khác'], datasets: [{ data: [45, 25, 15, 10, 5], backgroundColor: ['#78B32D', '#FFD700', '#4D96FF', '#FF4D4D', '#A0B0A0'] }] }
+            },
+            dd: {
+                title: "KPI CHI TIẾT — ĐIỀU ĐỘ SẢN XUẤT",
+                kpis: [
+                    { label: "Schedule Attainment", val: "96.2%", sub: "KPI cốt lõi", color: "green" },
+                    { label: "Leadtime SX", val: "4.2d", sub: "Mục tiêu 5d", color: "green" },
+                    { label: "Tồn kho WIP", val: "12%", sub: "Mức an toàn", color: "green" },
+                    { label: "Downtime TB", val: "2.4h", sub: "Giảm 12%", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Phạm Văn D (Trưởng)", "Sử dụng công suất", "95%", "<span class='perf-green'>98.2%</span>"],
+                    ["Vũ Thị Q (Kế hoạch)", "Lỗi lệnh SX", "0", "<span class='perf-green'>0</span>"],
+                    ["Lê Văn R (Sàn)", "Kỷ luật 5S sàn", "9/10", "<span class='perf-amber'>8.5/10</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Hiệu suất OEE theo Xí nghiệp",
+                chartData: { labels: ['XN1', 'XN2', 'XN3', 'Cơ khí', 'HHCS'], datasets: [{ label: 'OEE %', data: [88, 72, 94, 85, 82], backgroundColor: '#78B32D' }] }
+            },
+            kd: {
+                title: "KPI CHI TIẾT — PHÒNG KINH DOANH",
+                kpis: [
+                    { label: "Doanh số T4", val: "22.8B", sub: "92% Target", color: "yellow" },
+                    { label: "Win rate", val: "24.5%", sub: "▲ 2% Q1", color: "green" },
+                    { label: "Pipeline Value", val: "92.5B", sub: "Cơ hội Q2", color: "green" },
+                    { label: "Giá trị đơn TB", val: "1.2B", sub: "Khối FDI", color: "blue" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Hoàng Văn E (Trưởng)", "Doanh số nhóm", "25B", "<span class='perf-amber'>22.8B</span>"],
+                    ["Trần Văn T (Sales)", "Doanh số cá nhân", "5B", "<span class='perf-green'>5.4B</span>"],
+                    ["Lê Thị S (Sales)", "Doanh số cá nhân", "5B", "<span class='perf-red'>3.8B</span>"]
+                ],
+                chartType: "doughnut",
+                chartLabel: "Trạng thái Pipeline",
+                chartData: { labels: ['Báo giá', 'Thương thảo', 'Đã chốt', 'Mất'], datasets: [{ data: [40, 30, 20, 10], backgroundColor: ['#4D96FF', '#FFD700', '#78B32D', '#FF4D4D'] }] }
+            },
+            cd: {
+                title: "KPI CHI TIẾT — KỸ THUẬT CƠ ĐIỆN",
+                kpis: [
+                    { label: "MTBF (Thời gian ổn định)", val: "154h", sub: "Mục tiêu 140h", color: "green" },
+                    { label: "Năng lượng/Tấn SP", val: "420kW", sub: "Sản xuất Xanh", color: "green" },
+                    { label: "Sự cố dừng máy", val: "04", sub: "Tổng dừng 12h", color: "red" },
+                    { label: "Bảo trì đúng hạn", val: "98%", sub: "Dữ liệu Base Asset", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Ngô Văn F (Trưởng)", "Tỷ lệ sự cố khẩn", "<5%", "<span class='perf-amber'>6.2%</span>"],
+                    ["Đỗ Văn U (Điện)", "Tiết kiệm điện", "5%", "<span class='perf-green'>5.4%</span>"],
+                    ["Bùi Văn V (Cơ)", "Hoàn thành bảo trì", "100%", "<span class='perf-green'>98.5%</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Điện năng tiêu thụ (kW/tấn)",
+                chartData: { labels: ['XN1', 'XN2', 'XN3', 'Phụ trợ'], datasets: [{ label: 'kWh/ton', data: [420, 580, 450, 310], backgroundColor: '#FF4D4D' }] }
+            },
+            km: {
+                title: "KPI CHI TIẾT — CƠ KHÍ KHUÔN MẪU",
+                kpis: [
+                    { label: "Khuôn mới hoàn thành", val: "12 bộ", sub: "Kế hoạch 10", color: "green" },
+                    { label: "Độ chính xác CNC", val: "99.98%", sub: "±0.01mm", color: "green" },
+                    { label: "Tỷ lệ sửa khuôn", val: "3.2%", sub: "Ngưỡng 5%", color: "green" },
+                    { label: "Vòng đời khuôn TB", val: "85k", sub: "Số lần dập", color: "blue" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Vũ Văn G (Trưởng)", "Năng suất máy CNC", "90%", "<span class='perf-green'>94%</span>"],
+                    ["Lê Văn W (Thiết kế)", "Lỗi thiết kế", "0", "<span class='perf-green'>0</span>"],
+                    ["Trần Văn X (Gia công)", "Hao hụt thép", "5%", "<span class='perf-green'>4.2%</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Số lần dập khuôn trọng điểm",
+                chartData: { labels: ['K1', 'K2', 'K3', 'K4', 'K5'], datasets: [{ label: 'Lần dập', data: [12000, 85000, 45000, 5000, 95000], backgroundColor: '#78B32D' }] }
+            },
+            qa: {
+                title: "KPI CHI TIẾT — PHÒNG QA",
+                kpis: [
+                    { label: "FPY (%)", val: "98.8%", sub: "Target 98%", color: "green" },
+                    { label: "Scrap Rate", val: "1.4%", sub: "Tiết kiệm nguyên liệu", color: "green" },
+                    { label: "Audit ISO score", val: "9.5/10", sub: "Tuân thủ 100%", color: "green" },
+                    { label: "Khiếu nại KH", val: "01", sub: "Đã xử lý dứt điểm", color: "yellow" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Đặng Thị H (Trưởng)", "Chi phí chất lượng", "2%", "<span class='perf-green'>1.8%</span>"],
+                    ["Nguyễn Thị Y (Kiểm)", "Tỷ lệ bỏ sót lỗi", "0%", "<span class='perf-green'>0%</span>"],
+                    ["Phạm Văn Z (Audit)", "Điểm đánh giá nội bộ", "9/10", "<span class='perf-green'>9.2/10</span>"]
+                ],
+                chartType: "pie",
+                chartLabel: "Phân tích Nguyên nhân Lỗi",
+                chartData: { labels: ['Liệu', 'Vận hành', 'Thiết bị', 'Nhiệt', 'Khác'], datasets: [{ data: [35, 20, 25, 15, 5], backgroundColor: ['#FF4D4D', '#FFD700', '#4D96FF', '#78B32D', '#A0B0A0'] }] }
+            },
+            ns: {
+                title: "KPI CHI TIẾT — PHÒNG NHÂN SỰ",
+                kpis: [
+                    { label: "Tổng nhân sự", val: "1,245", sub: "Xác nhận Anh Sơn", color: "blue" },
+                    { label: "Tỷ lệ nghỉ việc", val: "1.1%", sub: "Ổn định cao", color: "green" },
+                    { label: "Đào tạo kỹ thuật", val: "92%", sub: "KPI quý 2", color: "green" },
+                    { label: "E-NPS Score", val: "78", sub: "Mức hài lòng", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Nguyễn Văn Sơn (Trưởng)", "Chi phí nhân sự/Rev", "15%", "<span class='perf-green'>14.2%</span>"],
+                    ["Lê Thị L (Tuyển)", "Time-to-fill (KT)", "20 ngày", "<span class='perf-green'>18 ngày</span>"],
+                    ["Trần Thị M (Lương)", "Chính xác bảng lương", "100%", "<span class='perf-green'>100%</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Phễu Tuyển dụng",
+                chartData: { labels: ['Hồ sơ', 'Phỏng vấn', 'Thử việc', 'Chính thức'], datasets: [{ data: [200, 45, 12, 5], backgroundColor: '#4D96FF' }] }
+            },
+            vp: {
+                title: "KPI CHI TIẾT — VĂN PHÒNG",
+                kpis: [
+                    { label: "Xử lý tờ trình", val: "3.8h", sub: "Qua Base Workflow", color: "green" },
+                    { label: "Tiết kiệm CP HC", val: "12%", sub: "Số hóa quy trình", color: "green" },
+                    { label: "Sử dụng xe công", val: "92%", sub: "Lịch trình dày", color: "blue" },
+                    { label: "CSAT Nội bộ", val: "4.6/5", sub: "Rating dịch vụ", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Lê Thị J (Trưởng)", "Leadtime duyệt TB", "5h", "<span class='perf-green'>3.8h</span>"],
+                    ["Nguyễn Văn O (Xe)", "An toàn lộ trình", "100%", "<span class='perf-green'>100%</span>"],
+                    ["Bùi Thị P (HC)", "Chỉ số xanh văn phòng", "8/10", "<span class='perf-green'>8.5/10</span>"]
+                ],
+                chartType: "pie",
+                chartLabel: "Cơ cấu Đề xuất",
+                chartData: { labels: ['Mua sắm', 'Xe công', 'Tiếp khách', 'Sửa chữa'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#78B32D', '#FFD700', '#4D96FF', '#FF4D4D'] }] }
+            },
+            vt: {
+                title: "KPI CHI TIẾT — BAN VẬT TƯ",
+                kpis: [
+                    { label: "Savings (T4)", val: "450M", sub: "Mục tiêu 400M", color: "green" },
+                    { label: "Vòng quay kho", val: "12.4", sub: "Chỉ số tài chính", color: "green" },
+                    { label: "Leadtime nhập", val: "3.5d", sub: "Mục tiêu 4d", color: "green" },
+                    { label: "Rủi ro cung ứng", val: "Thấp", sub: "Base Supplier Sync", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Bùi Văn K (Trưởng)", "Số NCC mới duyệt", "02", "<span class='perf-green'>03</span>"],
+                    ["Lê Văn S (Mua)", "Giảm giá mua (SVR3L)", "2%", "<span class='perf-green'>2.1%</span>"],
+                    ["Trần Văn U (Kho)", "Chênh lệch tồn kho", "0%", "<span class='perf-green'>0.05%</span>"]
+                ],
+                chartType: "doughnut",
+                chartLabel: "Phân bổ Chi tiêu",
+                chartData: { labels: ['Mủ cao su', 'Hóa chất', 'Phụ liệu', 'Vật tư tiêu hao'], datasets: [{ data: [60, 20, 10, 10], backgroundColor: ['#78B32D', '#FFD700', '#4D96FF', '#FF4D4D'] }] }
+            },
+            tc: {
+                title: "KPI CHI TIẾT — TÀI CHÍNH KẾ TOÁN",
+                kpis: [
+                    { label: "Dòng tiền thuần", val: "+15.2B", sub: "Trạng thái Khỏe", color: "green" },
+                    { label: "DSO (Số ngày nợ)", val: "38 ngày", sub: "Mục tiêu 45 ngày", color: "green" },
+                    { label: "Biên LN Gộp", val: "18.4%", sub: "Target 18%", color: "green" },
+                    { label: "Số lỗi báo cáo", val: "0", sub: "Đối soát tự động", color: "green" }
+                ],
+                tableH: ["Nhân sự", "Chỉ số KPI chính", "Mục tiêu", "Kết quả"],
+                tableData: [
+                    ["Trần Văn L (Trưởng)", "Dòng tiền nhàn rỗi", "10B", "<span class='perf-green'>15.2B</span>"],
+                    ["Phan Thị V (Nợ)", "Thu hồi nợ quá hạn", "90%", "<span class='perf-amber'>82%</span>"],
+                    ["Lý Văn X (KT)", "Thời gian quyết toán", "5 ngày", "<span class='perf-green'>4.5 ngày</span>"]
+                ],
+                chartType: "bar",
+                chartLabel: "Doanh thu vs Chi phí (Tỷ đồng)",
+                chartData: { labels: ['T12', 'T1', 'T2', 'T3', 'T4'], datasets: [{ label: 'Doanh thu', data: [20, 22, 21, 25, 23], backgroundColor: '#78B32D' }, { label: 'Chi phí', data: [16, 17, 18, 19, 18], backgroundColor: '#FF4D4D' }] }
+            }
+        };
+
+        let currentChart = null;
+
+        function showDept(deptId) {
+            const dept = departments[deptId];
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeNav = Array.from(document.querySelectorAll('.nav-item')).find(el => {
+                const searchStr = deptId === 'bod' ? "BAN LÃNH ĐẠO" : dept.title.substring(10, 18);
+                return el.textContent.toUpperCase().includes(searchStr.toUpperCase());
+            });
+            if(activeNav) activeNav.classList.add('active');
+
+            const html = `
+                <header>
+                    <div class="dept-title">${dept.title}</div>
+                    <div class="sync-status">Đồng bộ Base KPI — Update: 06/04/2026 — 00:05</div>
+                </header>
+
+                <div class="kpi-grid">
+                    ${dept.kpis.map(kpi => `
+                        <div class="kpi-card">
+                            <div class="kpi-label">${kpi.label}</div>
+                            <div class="kpi-value" style="color: var(--ruth-${kpi.color})">${kpi.val}</div>
+                            <div class="kpi-sub" style="color: var(--text-dim)">${kpi.sub}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="data-section">
+                    <div class="panel">
+                        <div class="panel-h">${deptId === 'bod' ? 'THEO DÕI KPI 12 PHÒNG BAN' : 'GHI NHẬN KPI THEO NHÂN SỰ'}</div>
+                        <table>
+                            <thead>
+                                <tr>${dept.tableH.map(h => `<th>${h}</th>`).join('')}</tr>
+                            </thead>
+                            <tbody>
+                                ${dept.tableData.map(row => `
+                                    <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-h">${dept.chartLabel.toUpperCase()}</div>
+                        <div style="height: 250px;">
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="base-box">
+                    <div class="base-logo">B</div>
+                    <div style="font-size: 0.7rem; color: var(--blue);">
+                        <strong>BASE KPI ENGINE:</strong> 
+                        ${deptId === 'bod' 
+                            ? 'Lãnh đạo có cái nhìn tổng quan về hiệu suất toàn công ty. Các phòng ban màu Đỏ cần tập trung cải thiện quy trình vận hành.' 
+                            : 'Số liệu được ghi nhận trực tiếp từ quá trình làm việc của từng nhân sự, đảm bảo tính công bằng và động lực phát triển.'}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('main-content').innerHTML = html;
+            renderChart(dept.chartType, dept.chartData);
+        }
+
+        function renderChart(type, data) {
+            if (currentChart) currentChart.destroy();
+            const ctx = document.getElementById('deptChart').getContext('2d');
+            
+            const options = {
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { 
+                        display: (type === 'pie' || type === 'doughnut' || type === 'radar'),
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, color: '#A0B0A0' }
+                    } 
+                },
+                scales: (type === 'pie' || type === 'doughnut' || type === 'radar') ? {} : {
+                    y: { grid: { color: '#2D3D2F' }, ticks: { color: '#A0B0A0', font: { size: 9 } } },
+                    x: { grid: { display: false }, ticks: { color: '#A0B0A0', font: { size: 9 } } }
+                }
+            };
+
+            if(type === 'radar') {
+                options.scales = {
+                    r: {
+                        grid: { color: '#2D3D2F' },
+                        angleLines: { color: '#2D3D2F' },
+                        pointLabels: { color: '#A0B0A0', font: { size: 10 } },
+                        ticks: { display: false }
+                    }
+                };
+            }
+
+            currentChart = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: options
+            });
+        }
+
+        window.onload = () => showDept('bod');
+
+    </script>
+</body>
+</html>
